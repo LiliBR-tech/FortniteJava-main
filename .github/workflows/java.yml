@@ -1,0 +1,64 @@
+name: Java CI Simples (sem Maven)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: ⬇️ Checkout do código
+      uses: actions/checkout@v3
+
+    - name: ☕ Instalar Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: 🧪 Baixar JUnit 5 e dependências
+      run: |
+        wget -O junit-jupiter-api.jar https://repo1.maven.org/maven2/org/junit/jupiter/junit-jupiter-api/5.9.0/junit-jupiter-api-5.9.0.jar
+        wget -O junit-jupiter-engine.jar https://repo1.maven.org/maven2/org/junit/jupiter/junit-jupiter-engine/5.9.0/junit-jupiter-engine-5.9.0.jar
+        wget -O apiguardian-api.jar https://repo1.maven.org/maven2/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar
+        wget -O hamcrest.jar https://repo1.maven.org/maven2/org/hamcrest/hamcrest/2.2/hamcrest-2.2.jar
+        wget -O junit-platform-console-standalone.jar https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.9.0/junit-platform-console-standalone-1.9.0.jar
+
+    - name: ☕ Verificar versão do Java
+      run: java -version
+
+    - name: 🔍 Verificar arquivos baixados
+      run: ls -lh | grep junit
+
+    - name: 🛠️ Compilar código principal
+      run: |
+        mkdir -p bin
+        javac -d bin $(find src/main/java -name "*.java")
+
+    - name: 🧪 Compilar testes com JUnit 5
+      run: javac -cp "bin:junit-jupiter-api.jar:junit-jupiter-engine.jar:apiguardian-api.jar:hamcrest.jar:junit-platform-console-standalone.jar" -d bin $(find src/test/java -name "*.java")
+
+    - name: 🧪 Executar testes com JUnit 5
+      run: java -cp "bin:junit-platform-console-standalone.jar:junit-jupiter-api.jar:junit-jupiter-engine.jar:apiguardian-api.jar:hamcrest.jar:bin" org.junit.platform.console.ConsoleLauncher --scan-class-path
+
+    - name: 📦 Criar artefato .jar
+      run: jar cvf FortniteJava.jar -C bin .
+
+    - name: 📦 Empacotar como ZIP
+      run: zip FortniteJava.zip FortniteJava.jar
+
+    - name: 🚀 Criar GitHub Release com artefato
+      uses: softprops/action-gh-release@v2
+      with:
+        name: "Release - FortniteJava"
+        tag_name: "v1.0.${{ github.run_number }}"
+        files: FortniteJava.zip
+      env:
+         GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+
+    - name: 🔄 Mensagem final
+      run: echo "✅ Jogo compilado, testado e empacotado como FortniteJava.zip"   
